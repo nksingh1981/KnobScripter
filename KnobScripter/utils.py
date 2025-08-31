@@ -12,8 +12,10 @@ from KnobScripter import config
 try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtGui as QtWidgets
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets
+    else:
+        from PySide6 import QtWidgets
 except ImportError:
     from Qt import QtWidgets
 

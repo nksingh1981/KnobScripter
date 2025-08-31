@@ -11,11 +11,22 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
+
+# Compatibility helper for layout margins
+def setLayoutMargin_compat(layout, margin):
+    """Compatibility wrapper for setMargin/setContentsMargins"""
+    if hasattr(layout, 'setContentsMargins'):
+        layout.setContentsMargins(margin, margin, margin, margin)  # Modern Qt
+    elif hasattr(layout, 'setMargin'):
+        layout.setMargin(margin)  # Older Qt
 
 
 class FindReplaceWidget(QtWidgets.QWidget):
@@ -105,10 +116,7 @@ class FindReplaceWidget(QtWidgets.QWidget):
         self.layout.addLayout(self.find_layout)
         self.layout.addLayout(self.replace_layout)
         self.layout.setSpacing(4)
-        if nuke.NUKE_VERSION_MAJOR >= 11:
-            self.layout.setMargin(2)
-        else:
-            self.layout.setContentsMargins(2, 2, 2, 2)
+        setLayoutMargin_compat(self.layout, 2)
         self.layout.addSpacing(4)
         self.layout.addWidget(line)
         self.setLayout(self.layout)

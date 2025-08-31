@@ -4,7 +4,17 @@ info: A PySide2 widget that allows you to add snow to any other widget
 """
 import sys
 from random import randint
-from PySide2 import QtWidgets, QtCore, QtGui
+import nuke
+
+try:
+    if nuke.NUKE_VERSION_MAJOR < 11:
+        from PySide import QtCore, QtGui, QtGui as QtWidgets
+    elif nuke.NUKE_VERSION_MAJOR < 16:
+        from PySide2 import QtWidgets, QtCore, QtGui
+    else:
+        from PySide6 import QtWidgets, QtCore, QtGui
+except ImportError:
+    from Qt import QtCore, QtGui, QtWidgets
 
 
 class Snowflake(QtWidgets.QGraphicsItem):

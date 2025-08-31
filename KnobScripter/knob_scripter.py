@@ -42,11 +42,66 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+        QAction = QtGui.QAction
+        QShortcut = QtGui.QShortcut
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+        QAction = QtWidgets.QAction
+        QShortcut = QtWidgets.QShortcut
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
+        QAction = QtGui.QAction  # In PySide6, QAction is in QtGui
+        QShortcut = QtGui.QShortcut  # In PySide6, QShortcut is in QtGui
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
+    # Try to determine which module has QAction and QShortcut
+    try:
+        QAction = QtGui.QAction
+        QShortcut = QtGui.QShortcut
+    except AttributeError:
+        QAction = QtWidgets.QAction
+        QShortcut = QtWidgets.QShortcut
+
+# Compatibility helpers for tab stop methods (PySide6 renamed these)
+def setTabStopWidth_compat(widget, width):
+    """Compatibility wrapper for setTabStopWidth/setTabStopDistance"""
+    if hasattr(widget, 'setTabStopDistance'):
+        widget.setTabStopDistance(width)  # PySide6
+    elif hasattr(widget, 'setTabStopWidth'):
+        widget.setTabStopWidth(width)  # PySide2
+
+def tabStopWidth_compat(widget):
+    """Compatibility wrapper for tabStopWidth/tabStopDistance"""
+    if hasattr(widget, 'tabStopDistance'):
+        return widget.tabStopDistance()  # PySide6
+    elif hasattr(widget, 'tabStopWidth'):
+        return widget.tabStopWidth()  # PySide2
+    return 80  # Default fallback
+
+def fontMetrics_width_compat(font_metrics, text):
+    """Compatibility wrapper for QFontMetrics width/horizontalAdvance"""
+    if hasattr(font_metrics, 'horizontalAdvance'):
+        return font_metrics.horizontalAdvance(text)  # Qt 5.11+
+    elif hasattr(font_metrics, 'width'):
+        return font_metrics.width(text)  # Older Qt
+    return len(text) * 8  # Fallback estimate
+
+def setLayoutMargin_compat(layout, margin):
+    """Compatibility wrapper for setMargin/setContentsMargins"""
+    if hasattr(layout, 'setContentsMargins'):
+        layout.setContentsMargins(margin, margin, margin, margin)  # PySide6
+    elif hasattr(layout, 'setMargin'):
+        layout.setMargin(margin)  # PySide2
+
+
+def exec_compat(dialog):
+    """Compatibility wrapper for exec_/exec across Qt versions"""
+    if hasattr(dialog, 'exec'):
+        return dialog.exec()  # PySide6
+    else:
+        return dialog.exec_()  # PySide2 and older
 
 PrefsPanel = ""
 SnippetEditPanel = ""
@@ -374,7 +429,7 @@ class KnobScripterWidget(QtWidgets.QDialog):
         self.script_output.setReadOnly(1)
         self.script_output.setAcceptRichText(0)
         if config.prefs["se_tab_spaces"] != 0:
-            self.script_output.setTabStopWidth(self.script_output.tabStopWidth() / 4)
+            setTabStopWidth_compat(self.script_output, tabStopWidth_compat(self.script_output) / 4)
         self.script_output.setFocusPolicy(Qt.ClickFocus)
         self.script_output.setAutoFillBackground(0)
         self.script_output.installEventFilter(self)
@@ -387,8 +442,8 @@ class KnobScripterWidget(QtWidgets.QDialog):
         self.script_editor.cursorPositionChanged.connect(self.setTextSelection)
 
         if config.prefs["se_tab_spaces"] != 0:
-            self.script_editor.setTabStopWidth(
-                config.prefs["se_tab_spaces"] * QtGui.QFontMetrics(config.script_editor_font).horizontalAdvance(' '))
+            setTabStopWidth_compat(self.script_editor,
+                config.prefs["se_tab_spaces"] * fontMetrics_width_compat(QtGui.QFontMetrics(config.script_editor_font), ' '))
 
         # Add input and output to splitter
         self.splitter.addWidget(self.script_output)
@@ -454,29 +509,29 @@ class KnobScripterWidget(QtWidgets.QDialog):
     # Preferences submenus
     def createPrefsMenu(self):
         # Actions
-        self.echoAct = QtWidgets.QAction("Echo python commands", self, checkable=True,
+        self.echoAct = QAction("Echo python commands", self, checkable=True,
                                          statusTip="Toggle nuke's 'Echo all python commands to ScriptEditor'",
                                          triggered=self.toggleEcho)
         if nuke.toNode("preferences").knob("echoAllCommands").value():
             self.echoAct.toggle()
-        self.runInContextAct = QtWidgets.QAction("Run in context (beta)", self, checkable=True,
+        self.runInContextAct = QAction("Run in context (beta)", self, checkable=True,
                                                  statusTip="When inside a node, run the code replacing "
                                                            "nuke.thisNode() to the node's name, etc.",
                                                  triggered=self.toggleRunInContext)
         self.runInContextAct.setChecked(self.runInContext)
-        self.helpAct = QtWidgets.QAction("&User Guide (pdf)", self, statusTip="Open the KnobScripter 3 User Guide in your browser.",
+        self.helpAct = QAction("&User Guide (pdf)", self, statusTip="Open the KnobScripter 3 User Guide in your browser.",
                                          shortcut="F1", triggered=self.showHelp)
-        self.videotutAct = QtWidgets.QAction("Video Tutorial", self, statusTip="Link to the KnobScripter 3 tutorial in your browser.",
+        self.videotutAct = QAction("Video Tutorial", self, statusTip="Link to the KnobScripter 3 tutorial in your browser.",
                                          triggered=self.showVideotut)
-        self.nukepediaAct = QtWidgets.QAction("Show in Nukepedia", self,
+        self.nukepediaAct = QAction("Show in Nukepedia", self,
                                               statusTip="Open the KnobScripter download page on Nukepedia.",
                                               triggered=self.showInNukepedia)
-        self.githubAct = QtWidgets.QAction("Show in GitHub", self, statusTip="Open the KnobScripter repo on GitHub.",
+        self.githubAct = QAction("Show in GitHub", self, statusTip="Open the KnobScripter repo on GitHub.",
                                            triggered=self.showInGithub)
-        self.snippetsAct = QtWidgets.QAction("Snippets", self, statusTip="Open the Snippets editor.",
+        self.snippetsAct = QAction("Snippets", self, statusTip="Open the Snippets editor.",
                                              triggered=lambda: self.open_multipanel(tab="snippet_editor"))
         self.snippetsAct.setIcon(QtGui.QIcon(os.path.join(config.ICONS_DIR, "icon_snippets.png")))
-        self.prefsAct = QtWidgets.QAction("Preferences", self, statusTip="Open the Preferences panel.",
+        self.prefsAct = QAction("Preferences", self, statusTip="Open the Preferences panel.",
                                           triggered=lambda: self.open_multipanel(tab="ks_prefs"))
         self.prefsAct.setIcon(QtGui.QIcon(os.path.join(config.ICONS_DIR, "icon_prefs.png")))
 
@@ -532,21 +587,21 @@ class KnobScripterWidget(QtWidgets.QDialog):
 
         # Actions
         # TODO On opening the blink menu, show the .blink file name (../name.blink) in grey and update the checkboxes
-        self.blink_autoSave_act = QtWidgets.QAction("Auto-save to disk on compile", self, checkable=True,
+        self.blink_autoSave_act = QAction("Auto-save to disk on compile", self, checkable=True,
                                                     statusTip="Auto-save code backup on disk every time you save it",
                                                     triggered=self.blink_toggle_autosave_action)
         self.blink_autoSave_act.setChecked(config.prefs["ks_blink_autosave_on_compile"])
-        # self.blinkBackups_createFile_act = QtWidgets.QAction("Create .blink scratch file",
-        self.blink_load_act = QtWidgets.QAction("Load .blink", self, statusTip="Load the .blink code.",
+        # self.blinkBackups_createFile_act = QAction("Create .blink scratch file",
+        self.blink_load_act = QAction("Load .blink", self, statusTip="Load the .blink code.",
                                                 triggered=self.blink_load_triggered)
-        self.blink_save_act = QtWidgets.QAction("Save .blink", self, statusTip="Save the .blink code.",
+        self.blink_save_act = QAction("Save .blink", self, statusTip="Save the .blink code.",
                                                 triggered=self.blink_save_triggered)
-        self.blink_versionup_act = QtWidgets.QAction("Version Up", self, statusTip="Version up the .blink file.",
+        self.blink_versionup_act = QAction("Version Up", self, statusTip="Version up the .blink file.",
                                                      triggered=self.blink_versionup_triggered)
-        self.blink_browse_act = QtWidgets.QAction("Browse...", self, statusTip="Browse to the blink file's directory.",
+        self.blink_browse_act = QAction("Browse...", self, statusTip="Browse to the blink file's directory.",
                                                   triggered=self.blink_browse_action)
 
-        self.blink_filename_info_act = QtWidgets.QAction("No file specified.", self,
+        self.blink_filename_info_act = QAction("No file specified.", self,
                                                          statusTip="Displays the filename specified "
                                                                    "in the kernelSourceFile knob.")
         self.blink_filename_info_act.setEnabled(False)
@@ -2074,7 +2129,7 @@ class KnobScripterWidget(QtWidgets.QDialog):
 class KnobScripterPane(KnobScripterWidget):
     def __init__(self):
         super(KnobScripterPane, self).__init__(is_pane=True, _parent=QtWidgets.QApplication.activeWindow())
-        ctrl_s_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
+        ctrl_s_shortcut = QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         ctrl_s_shortcut.activatedAmbiguously.connect(self.saveClicked)
 
     def showEvent(self, the_event):

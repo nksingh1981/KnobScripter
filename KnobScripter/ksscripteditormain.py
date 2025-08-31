@@ -17,11 +17,29 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+        QAction = QtGui.QAction
+        QStringListModel = QtGui.QStringListModel
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+        QAction = QtWidgets.QAction
+        QStringListModel = QtGui.QStringListModel
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
+        QAction = QtGui.QAction  # In PySide6, QAction is in QtGui
+        QStringListModel = QtCore.QStringListModel  # In PySide6, QStringListModel is in QtCore
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
+    # Try to determine which module has these classes
+    try:
+        QAction = QtGui.QAction
+    except AttributeError:
+        QAction = QtWidgets.QAction
+    try:
+        QStringListModel = QtCore.QStringListModel
+    except AttributeError:
+        QStringListModel = QtGui.QStringListModel
 
 
 from KnobScripter.ksscripteditor import KSScriptEditor

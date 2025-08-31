@@ -8,9 +8,12 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
 
@@ -126,6 +129,14 @@ def append_code(code, title=None, desc=None, categories = None, path=None, lang=
     single_code_dict["code"] = code
     all_codes[lang].append(single_code_dict)
     save_code_gallery_dict(all_codes, path)
+
+
+def setLayoutMargin_compat(layout, margin):
+    """Compatibility function for setting layout margins across Qt versions."""
+    if hasattr(layout, 'setMargin'):
+        layout.setMargin(margin)
+    else:
+        layout.setContentsMargins(margin, margin, margin, margin)
 
 
 class AppendCodePanel(QtWidgets.QDialog):
@@ -263,7 +274,7 @@ class CodeGalleryWidget(QtWidgets.QWidget):
         filter_layout.addStretch()
         self.reload_button = QtWidgets.QPushButton("Reload")
         self.reload_button.clicked.connect(self.reload)
-        filter_layout.setMargin(0)
+        setLayoutMargin_compat(filter_layout, 0)
         filter_layout.addWidget(self.reload_button)
 
         self.filter_widget.setLayout(filter_layout)
@@ -274,7 +285,7 @@ class CodeGalleryWidget(QtWidgets.QWidget):
         # 2.1. Inner scroll content
         self.scroll_content = QtWidgets.QWidget()
         self.scroll_layout = QtWidgets.QVBoxLayout()
-        self.scroll_layout.setMargin(0)
+        setLayoutMargin_compat(self.scroll_layout, 0)
         self.scroll_layout.addStretch()
         self.scroll_content.setLayout(self.scroll_layout)
         self.scroll_content.setContentsMargins(0, 0, 8, 0)
