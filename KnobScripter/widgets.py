@@ -13,13 +13,24 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
 
 from KnobScripter import ksscripteditor, config
+
+# Compatibility helper for layout margins
+def setLayoutMargin_compat(layout, margin):
+    """Compatibility wrapper for setMargin/setContentsMargins"""
+    if hasattr(layout, 'setContentsMargins'):
+        layout.setContentsMargins(margin, margin, margin, margin)  # Modern Qt
+    elif hasattr(layout, 'setMargin'):
+        layout.setMargin(margin)  # Older Qt
 
 
 class GripWidget(QtWidgets.QFrame):
@@ -28,7 +39,7 @@ class GripWidget(QtWidgets.QFrame):
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(inner_widget)
-        layout.setMargin(0)
+        setLayoutMargin_compat(layout, 0)
         self.setLayout(layout)
 
         cursor = None
@@ -201,11 +212,16 @@ class ToggableGroup(QtWidgets.QFrame):
         self.setLayout(master_layout)
         self.setCollapsed(self.collapsed)
 
-        master_layout.setMargin(0)
-        self.content_layout.setMargin(0)
-        self.content_layout.setSizeConstraint(self.content_layout.SetNoConstraint)
+        setLayoutMargin_compat(master_layout, 0)
+        setLayoutMargin_compat(self.content_layout, 0)
+        # PySide6 compatibility for SetNoConstraint
+        try:
+            self.content_layout.setSizeConstraint(self.content_layout.SetNoConstraint)
+        except AttributeError:
+            # PySide6: Use QtWidgets.QLayout.SizeConstraint enum
+            self.content_layout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetNoConstraint)
         self.setMinimumHeight(10)
-        self.top_clickable_layout.setMargin(0)
+        setLayoutMargin_compat(self.top_clickable_layout, 0)
 
     def setTitle(self, text=""):
         self.title_label.setText(text)
@@ -280,7 +296,7 @@ class RadioSelector(QtWidgets.QWidget):
         self.layout.addStretch(1)
 
         self.setLayout(self.layout)
-        self.layout.setMargin(0)
+        setLayoutMargin_compat(self.layout, 0)
 
     def button_clicked(self, button):
         self.radio_selected.emit(str(button.text()))

@@ -16,11 +16,52 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+        QRegExp = QtCore.QRegExp
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+        QRegExp = QtCore.QRegExp
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
+        # PySide6 uses QRegularExpression instead of QRegExp
+        try:
+            # Create a compatibility wrapper for QRegExp
+            class QRegExpCompat:
+                def __init__(self, pattern):
+                    self._re = QtCore.QRegularExpression(pattern)
+                    self._match = None
+                
+                def indexIn(self, text, offset=0):
+                    self._match = self._re.match(text, offset)
+                    if self._match.hasMatch():
+                        return self._match.capturedStart()
+                    return -1
+                
+                def pos(self, nth):
+                    if self._match and self._match.hasMatch():
+                        return self._match.capturedStart(nth)
+                    return -1
+                
+                def cap(self, nth):
+                    if self._match and self._match.hasMatch():
+                        return self._match.captured(nth)
+                    return ""
+                
+                def matchedLength(self):
+                    if self._match and self._match.hasMatch():
+                        return self._match.capturedLength()
+                    return 0
+            
+            QRegExp = QRegExpCompat
+        except AttributeError:
+            QRegExp = QtCore.QRegExp  # Fallback if available
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
+    try:
+        QRegExp = QtCore.QRegularExpression
+    except AttributeError:
+        QRegExp = QtCore.QRegExp
 
 
 class KSPythonHighlighter(QtGui.QSyntaxHighlighter):
@@ -145,11 +186,11 @@ class KSPythonHighlighter(QtGui.QSyntaxHighlighter):
         singletons = ['True', 'False', 'None']
 
         if 'comment' in styles:
-            tri_single = (QtCore.QRegExp("'''"), 1, styles['comment'])
-            tri_double = (QtCore.QRegExp('"""'), 2, styles['comment'])
+            tri_single = (QRegExp("'''"), 1, styles['comment'])
+            tri_double = (QRegExp('"""'), 2, styles['comment'])
         else:
-            tri_single = (QtCore.QRegExp("'''"), 1, base_format)
-            tri_double = (QtCore.QRegExp('"""'), 2, base_format)
+            tri_single = (QRegExp("'''"), 1, base_format)
+            tri_double = (QRegExp('"""'), 2, base_format)
 
         # 2. Rules
         rules = []
@@ -212,7 +253,7 @@ class KSPythonHighlighter(QtGui.QSyntaxHighlighter):
 
         # 3. Resulting dictionary
         result = {
-            "rules": [(QtCore.QRegExp(pat), index, fmt) for (pat, index, fmt) in rules],
+            "rules": [(QRegExp(pat), index, fmt) for (pat, index, fmt) in rules],
             # Build a QRegExp for each pattern
             "tri_single": tri_single,
             "tri_double": tri_double,

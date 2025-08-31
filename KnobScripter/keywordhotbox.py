@@ -11,11 +11,22 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
+
+
+def setLayoutMargin_compat(layout, margin):
+    """Compatibility function for setting layout margins across Qt versions."""
+    if hasattr(layout, 'setMargin'):
+        layout.setMargin(margin)
+    else:
+        layout.setContentsMargins(margin, margin, margin, margin)
 
 
 class KeywordHotbox(QtWidgets.QDialog):
@@ -72,7 +83,7 @@ class KeywordHotbox(QtWidgets.QDialog):
         if nuke.NUKE_VERSION_MAJOR < 11:
             master_layout.setContentsMargins(0, 0, 0, 0)
         else:
-            master_layout.setMargin(0)
+            setLayoutMargin_compat(master_layout, 0)
             master_layout.setSpacing(0)
 
         self.setToolTip("<h2>{}</h2>".format(self.category) + category_help)

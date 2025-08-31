@@ -19,13 +19,25 @@ try:
     if nuke.NUKE_VERSION_MAJOR < 11:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
-    else:
+    elif nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
 
 from KnobScripter import config, blinkhighlighter, pythonhighlighter
+
+# Compatibility helper for QFontMetrics width/horizontalAdvance
+def fontMetrics_width_compat(font_metrics, text):
+    """Compatibility wrapper for QFontMetrics width/horizontalAdvance"""
+    if hasattr(font_metrics, 'horizontalAdvance'):
+        return font_metrics.horizontalAdvance(text)  # Qt 5.11+
+    elif hasattr(font_metrics, 'width'):
+        return font_metrics.width(text)  # Older Qt
+    return len(text) * 8  # Fallback estimate
 
 
 class KSScriptEditor(QtWidgets.QPlainTextEdit):
@@ -70,7 +82,7 @@ class KSScriptEditor(QtWidgets.QPlainTextEdit):
             max_num /= 10
             digits += 1
 
-        space = 7 + self.fontMetrics().horizontalAdvance('9') * digits
+        space = 7 + fontMetrics_width_compat(self.fontMetrics(), '9') * digits
         return space
 
     def updateLineNumberAreaWidth(self):
@@ -81,7 +93,12 @@ class KSScriptEditor(QtWidgets.QPlainTextEdit):
         if dy:
             self.lineNumberArea.scroll(0, dy)
         else:
-            self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+            # PySide6 compatibility: update() method signature changed
+            try:
+                self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+            except TypeError:
+                # PySide6: update() takes no arguments or a QRect, use update() to refresh entire widget
+                self.lineNumberArea.update()
 
         if rect.contains(self.viewport().rect()):
             self.updateLineNumberAreaWidth()
