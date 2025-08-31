@@ -3,7 +3,7 @@
 ## Overview
 This document outlines the compatibility issues found and fixes applied to make KnobScripter work with Nuke 16, which uses PySide6 instead of PySide2.
 
-## ✅ FIXED ISSUES
+## FIXED ISSUES
 
 ### 1. Qt Framework Version Compatibility
 **Problem**: Code only handled PySide (Nuke < 11) and PySide2 (Nuke ≥ 11), but Nuke 16 uses PySide6.
@@ -135,7 +135,7 @@ def fontMetrics_width_compat(font_metrics, text):
 - knob_scripter.py (1 instance fixed)
 - ksscripteditor.py (1 instance fixed)
 
-## ⚠️ REMAINING ISSUES TO ADDRESS
+## REMAINING ISSUES TO ADDRESS
 
 ### 1. Layout.setMargin() Deprecation
 **Problem**: `setMargin()` method was deprecated in favor of `setContentsMargins()`.
