@@ -173,7 +173,7 @@ r'\+', r'\*', r'\%'  # Raw strings
 '\\+', '\\*', '\\%'  # Properly escaped
 ```
 
-## 🔧 RECOMMENDATIONS FOR FULL COMPATIBILITY
+## RECOMMENDATIONS FOR FULL COMPATIBILITY
 
 ### Quick Fix Implementation
 To fully resolve all compatibility issues, implement these additional changes:
@@ -219,7 +219,7 @@ def setLayoutMargin(layout, margin):
 
 3. **Fix string escape sequences** by converting to raw strings.
 
-## 🧪 TESTING
+## TESTING
 
 After implementing fixes, test the following functionality:
 - [ ] Script editor opens without errors
@@ -231,7 +231,7 @@ After implementing fixes, test the following functionality:
 - [ ] Code gallery functions
 - [ ] Snippet functionality works
 
-## 📝 VERSION INFO
+## VERSION INFO
 
 - **KnobScripter Version**: 3.1 (Jan 15 2024)
 - **Target Nuke Versions**: 16+
